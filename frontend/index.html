@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OncoPathAI | Clinical Histopathology Workstation</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#9333ea',
+                        dark: '#030712',
+                        darker: '#020617',
+                        accent: '#38bdf8',
+                        danger: '#f43f5e',
+                        success: '#10b981',
+                        warning: '#f59e0b'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- OpenSeadragon -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-darker text-slate-200 font-sans min-h-screen flex flex-col antialiased">
+    <!-- Navigation Bar -->
+    <nav class="bg-primary/80 backdrop-blur-md border-b border-slate-800 p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent via-secondary to-danger flex items-center justify-center font-bold text-white shadow-[0_0_20px_rgba(56,189,248,0.4)]">
+                <span class="text-lg tracking-wider">Ω</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400">
+                    OncoPath<span class="text-accent">AI</span>
+                </h1>
+                <p class="text-[10px] text-slate-400 tracking-wider uppercase font-semibold">Clinical Histopathology Workstation</p>
+            </div>
+        </div>
+
+
+        <!-- Security & Compliance Status -->
+        <div class="flex items-center space-x-4">
+            <div class="hidden md:flex items-center space-x-2 bg-success/10 border border-success/30 px-3 py-1.5 rounded-full text-xs text-success">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                </span>
+                <span class="font-medium tracking-wide">HIPAA & DPDPA 2023 Secure Sandbox</span>
+            </div>
+            
+            <div class="flex items-center space-x-3 bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-lg text-xs text-slate-400">
+                <span>Resident Agent: <span class="text-accent font-semibold">Online</span></span>
+                <div class="w-2 h-2 rounded-full bg-accent glow-active"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-grow p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[1800px] w-full mx-auto">
+        
+        <!-- Left 2 Columns: slide Viewer & Controls -->
+        <div class="lg:col-span-2 flex flex-col space-y-4">
+            
+
+            <!-- Main Viewer Container -->
+            <div class="bg-primary rounded-xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col flex-grow min-h-[550px] relative">
+                
+                <!-- Viewer Header -->
+                <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900/40 gap-3 z-10">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-lg">🔬</span>
+                        <div>
+                            <h2 class="text-sm font-semibold text-slate-100 flex items-center">
+                                H&E Slide Analysis Viewer
+                                <span id="file-name-display" class="ml-3 text-[10px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20"></span>
+                            </h2>
+                            <p class="text-[10px] text-slate-400">OpenSeadragon high-resolution tiled cell coordinate mapping</p>
+                        </div>
+                    </div>
+                    
+                    <!-- File Upload Button & View Options -->
+                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg transition-colors font-medium text-center">
+                            Upload 512x512 Patch
+                            <input type="file" id="upload-patch" class="hidden" accept="image/png, image/jpeg">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Floating Canvas Layer Toggles (Directly inside Viewer) -->
+                <div class="absolute top-20 left-4 z-20 bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-lg p-2 flex flex-col space-y-1.5 shadow-xl">
+                    <p class="text-[9px] uppercase tracking-wider text-slate-400 font-bold px-2 py-1">View Layers</p>
+                    <button id="toggle-tissue-btn" class="text-left text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium px-3 py-1.5 rounded transition-all flex items-center justify-between border border-slate-800">
+                        <span>H&E Core</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-accent ml-4"></span>
+                    </button>
+                    <button id="toggle-overlay-btn" class="text-left text-xs bg-accent/25 hover:bg-accent/40 text-accent font-semibold px-3 py-1.5 rounded transition-all flex items-center justify-between border border-accent/30">
+                        <span>Nuclei Highlights</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-danger ml-4 glow-active"></span>
+                    </button>
+                    <button id="toggle-stroma-btn" class="text-left text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium px-3 py-1.5 rounded transition-all flex items-center justify-between border border-slate-800">
+                        <span>Stroma Mask</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-500 ml-4"></span>
+                    </button>
+                </div>
+
+                <!-- OpenSeadragon Viewer Canvas -->
+                <div id="osd-viewer" class="flex-grow w-full bg-black relative">
+                    <!-- Overlay Mask Layer for Stroma (mock colored canvas overlay) -->
+                    <div id="stroma-canvas-layer" class="absolute inset-0 bg-purple-900/15 pointer-events-none mix-blend-color hidden"></div>
+                    
+                    <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-950/40 p-6 text-center">
+                        <div class="w-16 h-16 mb-4 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 shadow-inner text-slate-400 text-2xl">
+                            🔬
+                        </div>
+                        <h3 class="text-slate-300 font-medium mb-1">Slide Viewer Empty</h3>
+                        <p class="text-xs text-slate-500 max-w-sm">Upload an H&E histology image patch to render coordinates and interactive overlays.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Secure Local Processing Spec -->
+            <div class="glass-panel p-4 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-400">
+                <div class="flex items-center space-x-3">
+                    <span class="text-accent text-xl">🛡️</span>
+                    <div>
+                        <h4 class="font-semibold text-slate-300">HIPAA Compliant</h4>
+                        <p class="text-[10px]">Zero PHI cloud exposure. Safe storage.</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 border-t sm:border-t-0 sm:border-l border-slate-800 pt-3 sm:pt-0 sm:pl-4">
+                    <span class="text-secondary text-xl">💻</span>
+                    <div>
+                        <h4 class="font-semibold text-slate-300">GPU Acceleration</h4>
+                        <p class="text-[10px]">Apple MLX 4-bit quantized neural back-end.</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 border-t sm:border-t-0 sm:border-l border-slate-800 pt-3 sm:pt-0 sm:pl-4">
+                    <span class="text-success text-xl">🧬</span>
+                    <div>
+                        <h4 class="font-semibold text-slate-300">Interoperable standard</h4>
+                        <p class="text-[10px]">HL7 FHIR JSON bundle ingestion active.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right 1 Column: Tabbed Evidence & Clinical Context Sidebar -->
+        <div class="bg-primary rounded-xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden max-h-[850px]">
+            
+            <!-- Tabs Header Selection -->
+            <div class="flex border-b border-slate-800 bg-slate-900/50">
+                <button id="tab-evidence-btn" class="tab-btn active flex-1 py-3.5 text-center text-xs font-semibold tracking-wider uppercase text-slate-300 transition-all border-b-2 border-transparent">
+                    🔍 Evidence Walkthrough
+                </button>
+                <button id="tab-fhir-btn" class="tab-btn flex-1 py-3.5 text-center text-xs font-semibold tracking-wider uppercase text-slate-400 hover:text-slate-200 transition-all border-b-2 border-transparent">
+                    📋 FHIR Patient Case
+                </button>
+            </div>
+
+            <!-- Tab Content Panel -->
+            <div class="flex-grow overflow-y-auto p-5 space-y-6">
+                
+                <!-- TAB 1: EVIDENCE WALKTHROUGH PANEL -->
+                <div id="tab-evidence-content" class="space-y-6">
+                    
+                    <!-- Local GPU Inference Active Status Indicator -->
+                    <div id="local-gpu-status-card" class="hidden p-4 rounded-xl border border-accent/30 bg-slate-950/80 flex items-center space-x-3.5 shadow-[0_0_20px_rgba(56,189,248,0.25)] border-l-4 border-l-accent">
+                        <div class="relative flex h-3.5 w-3.5 shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-accent glow-active"></span>
+                        </div>
+                        <div class="flex-grow">
+                            <h4 class="text-accent font-bold text-xs uppercase tracking-wider flex items-center">
+                                GPU Local Inference Active
+                            </h4>
+                            <p class="text-slate-300 text-[10px] mt-0.5 leading-normal">
+                                MedGemma-it is compiling slide morphology & FHIR patient bundle context on Apple Metal... generating clinical pathway response.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Predicted Diagnosis Dashboard Header -->
+                    <div id="results-panel" class="space-y-5 hidden">
+                        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 p-2 text-xs font-mono text-slate-500">RES-1</div>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Grading Inference</p>
+                            <h3 id="grade-result" class="text-lg font-bold text-slate-100">Predicting...</h3>
+                            
+                            <!-- Confidence Bar -->
+                            <div class="mt-3 w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                <div id="confidence-bar" class="bg-accent h-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Grid -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800/80 text-center">
+                                <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Confidence</p>
+                                <div class="flex items-end justify-center space-x-1">
+                                    <span id="confidence-score" class="text-xl font-extrabold text-slate-200">0.00</span>
+                                    <span class="text-[10px] text-slate-500 mb-1">AUC</span>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800/80 text-center">
+                                <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Homogeneity</p>
+                                <div class="flex items-end justify-center space-x-1">
+                                    <span id="homogeneity-score" class="text-xl font-extrabold text-slate-200">0.00</span>
+                                    <span class="text-[10px] text-slate-500 mb-1">Score</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Cytological & Stromal Analysis -->
+                        <div class="bg-slate-950/60 p-4 rounded-lg border border-slate-800 space-y-4">
+                            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Cytological & Stromal Analysis</h4>
+                            
+                            <!-- STR Bar -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-[10px] text-slate-400 font-medium">
+                                    <span>Stromal-to-Tumor Ratio</span>
+                                    <span id="detailed-str-density" class="text-accent font-semibold">Loose/Inert</span>
+                                </div>
+                                <div class="flex h-3 w-full rounded-full overflow-hidden border border-slate-800 font-mono text-[8px] font-bold text-center">
+                                    <div id="detailed-str-stroma-bar" class="bg-purple-900/60 text-purple-300 transition-all duration-500 flex items-center justify-center" style="width: 35%">Stroma 35%</div>
+                                    <div id="detailed-str-tumor-bar" class="bg-rose-950 text-rose-400 transition-all duration-500 flex items-center justify-center" style="width: 65%">Tumor 65%</div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                                <div class="bg-slate-900/30 p-2 rounded border border-slate-800/60 flex flex-col justify-between space-y-1">
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-500 font-medium">Glandular Complexity</span>
+                                    <span id="detailed-glandular" class="font-semibold text-slate-200">Low</span>
+                                </div>
+                                <div class="bg-slate-900/30 p-2 rounded border border-slate-800/60 flex flex-col justify-between space-y-1">
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-500 font-medium">Immune Infiltration</span>
+                                    <span id="detailed-immune" class="font-semibold text-slate-200">None</span>
+                                </div>
+                                <div class="bg-slate-900/30 p-2 rounded border border-slate-800/60 flex flex-col justify-between space-y-1">
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-500 font-medium">Nuclear Polarity</span>
+                                    <span id="detailed-polarity" class="font-semibold text-slate-200">Preserved</span>
+                                </div>
+                                <div class="bg-slate-900/30 p-2 rounded border border-slate-800/60 flex flex-col justify-between space-y-1">
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-500 font-medium">Nucleoli</span>
+                                    <span id="detailed-nucleoli" class="font-semibold text-slate-200">Inconspicuous</span>
+                                </div>
+                                <div class="bg-slate-900/30 p-2 rounded border border-slate-800/60 flex flex-col justify-between space-y-1">
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-500 font-medium">Nuclear Pleomorphism</span>
+                                    <span id="detailed-pleomorphism" class="font-semibold text-slate-200">Mild</span>
+                                </div>
+                                <div class="bg-slate-900/30 p-2 rounded border border-slate-800/60 flex flex-col justify-between space-y-1">
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-500 font-medium">Tissue Artifacts</span>
+                                    <span id="detailed-artifacts" class="font-semibold text-slate-200">None</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Expert-in-the-loop Triage Warning -->
+                        <div id="triage-alert" class="hidden p-4 rounded-lg border bg-warning/10 border-warning/30 flex items-start space-x-3 animate-pulse">
+                            <span class="text-warning text-lg">⚠️</span>
+                            <div>
+                                <h4 class="text-warning font-semibold text-xs">Expert-in-the-loop Required</h4>
+                                <p class="text-slate-400 text-[10px] mt-1 leading-relaxed">
+                                    Confidence is below the 0.85 clinical threshold. Model signals higher uncertainty or potential cellular layout noise; manual expert pathologist clearance recommended.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Prognostic Biomarkers Panel -->
+                        <div class="bg-slate-950/60 p-4 rounded-lg border border-slate-800">
+                            <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Prognostic Biomarkers</h4>
+                            <ul id="biomarkers-list" class="space-y-2.5">
+                                <!-- Populated dynamically -->
+                            </ul>
+                        </div>
+
+                        <!-- AI Reasoner Visual-Linguistic Summary (prevent automation bias) -->
+                        <div class="bg-gradient-to-br from-secondary/5 to-accent/5 p-4 rounded-lg border border-slate-800">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="text-sm">💬</span>
+                                <h4 class="text-xs font-semibold text-slate-200 tracking-wide">Resident Agent Reasoning Summary</h4>
+                            </div>
+                            <p id="ai-reasoning-summary" class="text-slate-400 text-xs leading-relaxed italic">
+                                Loading clinical reasoning pathway from MedGemma-it...
+                            </p>
+                        </div>
+
+                        <!-- Download Report Button -->
+                        <button id="download-report-btn" class="w-full bg-accent/15 hover:bg-accent/25 border border-accent/30 text-accent hover:text-white transition-all text-xs font-semibold py-2.5 rounded-lg flex items-center justify-center space-x-2 shadow-md">
+                            <span>📄</span>
+                            <span>Download Pathology Report</span>
+                        </button>
+
+                        <!-- Interactive Walkthrough Timeline (Rule 3) -->
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center">
+                                    <span class="mr-1.5 text-danger font-normal">✨</span> Evidence Walkthrough Steps
+                                </h4>
+                                <span class="text-[9px] text-slate-500 uppercase">Click step to locate</span>
+                            </div>
+                            
+                            <p class="text-[10px] text-slate-400 mb-3 bg-danger/10 border border-danger/25 p-2 rounded leading-normal">
+                                <strong>Preventing Automation Bias:</strong> Do not just accept the grade! Click on the evidence anchors below. The slide viewer will automatically focus and highlight the exact cell and nuclei clusters supporting the diagnosis.
+                            </p>
+                            
+                            <div id="walkthrough-timeline" class="space-y-3">
+                                <!-- Injected dynamically -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Empty State for Evidence -->
+                    <div id="evidence-empty" class="text-center py-12 text-slate-500 space-y-3">
+                        <div class="text-3xl">🔍</div>
+                        <h4 class="text-sm font-medium text-slate-400">Waiting for Histopathology Data</h4>
+                        <p class="text-xs text-slate-600 max-w-xs mx-auto">Upload an H&E tissue patch image to review spatial nuclei analysis.</p>
+                    </div>
+
+                </div>
+
+                <!-- TAB 2: FHIR CLINICAL HISTORY PANEL -->
+                <div id="tab-fhir-content" class="space-y-6 hidden">
+                    
+                    <!-- Patient Profile Header -->
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 text-xl" id="patient-avatar">
+                            👤
+                        </div>
+                        <div>
+                            <h3 id="patient-name" class="font-bold text-slate-100">No Active Case</h3>
+                            <p class="text-xs text-slate-400 flex items-center space-x-2">
+                                <span id="patient-gender">Unknown</span>
+                                <span class="text-slate-600">•</span>
+                                <span id="patient-age">Age N/A</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Timeline / History -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Clinical Patient History</h4>
+                        <div id="clinical-history-list" class="space-y-2.5">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Biomarker Levels LOINC Codes Display -->
+                    <div class="bg-slate-950/60 p-4 rounded-lg border border-slate-800 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Lab Markers (LOINC Standard)</h4>
+                            <span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">CEA Ingested</span>
+                        </div>
+                        
+                        <div id="loinc-markers-container" class="space-y-4">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Custom FHIR Bundle Uploader Panel -->
+                    <div class="border-t border-slate-800 pt-5 space-y-3">
+                        <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                            <span>Ingest custom FHIR Bundle</span>
+                            <span class="text-[9px] font-normal text-slate-500 uppercase">HL7 JSON format</span>
+                        </h4>
+                        <p class="text-[10px] text-slate-500">Provide customized clinical history bundles to merge clinical records alongside histology slides.</p>
+                        
+                        <textarea id="fhir-json-input" class="w-full h-32 bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-[10px] text-slate-300 focus:outline-none focus:ring-1 focus:ring-accent" placeholder='{ "resourceType": "Bundle", ... }'></textarea>
+                        
+                        <div class="flex space-x-2">
+                            <button id="ingest-fhir-btn" class="flex-grow bg-accent/15 hover:bg-accent/25 border border-accent/30 text-accent text-xs font-semibold py-2 rounded-lg transition-colors">
+                                Ingest FHIR In-Memory
+                            </button>
+                            <button id="reset-fhir-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs py-2 px-3 rounded-lg transition-colors">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            
+            <!-- Sidebar Footer -->
+            <div class="p-3 border-t border-slate-800 bg-slate-900/30 text-center text-[9px] text-slate-500">
+                OncoPathAI Resident Agent v1.2.0 • HIPAA Compliant Secure local container.
+            </div>
+        </div>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
